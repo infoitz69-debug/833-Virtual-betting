@@ -1,3 +1,4 @@
+const ADMIN_EMAIL = "infoitz69@example.com"; 
 // -----------------------------
 // Firebase configuration (v8 style)
 // -----------------------------
@@ -11,16 +12,20 @@ const firebaseConfig = {
   measurementId: "G-35CPSG4BWD"
 };
 
-// Initialize Firebase
 const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
 // -----------------------------
-// Matches (Admin can change odds here)
-const matches = [
-  { id: 1, name: "Team A vs Team B", odds: 2 }, 
-  { id: 2, name: "Team C vs Team D", odds: 1.5 }
+// Admin Email
+const ADMIN_EMAIL = "youremail@example.com"; // <-- replace with your email
+
+// -----------------------------
+// Matches (editable by admin)
+let matches = [
+  { id: 1, name: "Team A vs Team B", odds: 2 },
+  { id: 2, name: "Team C vs Team D", odds: 1.5 },
+  { id: 3, name: "Team E vs Team F", odds: 1.8 }
 ];
 
 // -----------------------------
@@ -38,7 +43,7 @@ window.register = async function() {
     const userCredential = await auth.createUserWithEmailAndPassword(email, password);
     const user = userCredential.user;
 
-    await db.collection("users").doc(user.uid).set({ coins: 0 });
+    await db.collection("users").doc(user.uid).set({ coins: 0, email: email });
 
     alert("User registered! Coins will be assigned by admin.");
     document.getElementById("balance").innerText = "Coins: 0";
@@ -72,6 +77,15 @@ window.login = async function() {
 
     // Load matches
     loadMatches(user.uid);
+
+    // Load leaderboard
+    loadLeaderboard();
+
+    // Show admin panel only for admin
+    if(email === ADMIN_EMAIL) {
+      loadAdminPanel();
+    }
+
   } catch (error) {
     alert("Error: " + error.message);
   }
@@ -107,7 +121,6 @@ async function placeBet(matchId, userId) {
     return;
   }
 
-  // Fetch current balance
   const userDoc = await db.collection("users").doc(userId).get();
   let coins = userDoc.data().coins;
 
@@ -116,9 +129,8 @@ async function placeBet(matchId, userId) {
     return;
   }
 
-  // For demo: Random outcome
   const match = matches.find(m => m.id === matchId);
-  const win = Math.random() < 0.5; // 50% chance win
+  const win = Math.random() < 0.5;
 
   if (win) {
     coins += betAmount * match.odds;
@@ -128,10 +140,58 @@ async function placeBet(matchId, userId) {
     alert(`You lost! New balance: ${coins}`);
   }
 
-  // Update Firestore
   await db.collection("users").doc(userId).update({ coins });
-
-  // Update balance on page
   document.getElementById("balance").innerText = "Coins: " + coins;
+
+  loadLeaderboard();
+}
+
+// -----------------------------
+// Leaderboard
+async function loadLeaderboard() {
+  const container = document.getElementById("leaderboard");
+  container.innerHTML = "<h3>Top Players:</h3>";
+
+  const snapshot = await db.collection("users").orderBy("coins", "desc").limit(5).get();
+
+  snapshot.forEach(doc => {
+    const user = doc.data();
+    const div = document.createElement("div");
+    div.textContent = `${user.email}: ${user.coins} coins`;
+    container.appendChild(div);
+  });
+}
+
+// -----------------------------
+// Admin Panel
+function loadAdminPanel() {
+  const container = document.getElementById("admin");
+  container.innerHTML = "<h3>Edit Matches and Odds:</h3>";
+
+  matches.forEach((match, index) => {
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <input type="text" id="match-name-${match.id}" value="${match.name}" placeholder="Match name">
+      <input type="number" id="match-odds-${match.id}" value="${match.odds}" placeholder="Odds" step="0.1" min="1">
+      <button onclick="updateMatch(${index}, ${match.id})">Update</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function updateMatch(index, matchId) {
+  const name = document.getElementById(`match-name-${matchId}`).value;
+  const odds = parseFloat(document.getElementById(`match-odds-${matchId}`).value);
+
+  if (!name || isNaN(odds) || odds < 1) {
+    alert("Enter valid name and odds");
+    return;
+  }
+
+  matches[index].name = name;
+  matches[index].odds = odds;
+
+  alert("Match updated!");
+  loadMatches(auth.currentUser.uid);
 }
 
