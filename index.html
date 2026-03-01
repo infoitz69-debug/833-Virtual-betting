@@ -1,14 +1,16 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Virtual Betting Upgraded</title>
+    <title>Virtual Betting Demo</title>
 
     <!-- Firebase SDKs (v8 style) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
 
+    <!-- Your JS -->
     <script src="app.js" defer></script>
 
     <style>
@@ -23,7 +25,7 @@
 </head>
 <body>
 
-    <h1>Virtual Betting Upgraded</h1>
+    <h1>Virtual Betting Demo</h1>
 
     <!-- Login/Register -->
     <input type="email" id="email" placeholder="Email">
@@ -33,7 +35,7 @@
 
     <p id="balance">Coins: 0</p>
 
-    <!-- Betting Dashboard -->
+    <!-- Dashboard -->
     <div id="dashboard" style="display:none;">
         <h2>Matches to Bet On</h2>
         <div id="matches"></div>
@@ -41,7 +43,6 @@
         <h2>Leaderboard</h2>
         <div id="leaderboard"></div>
 
-        <h2>Admin: Update Odds</h2>
         <div id="admin"></div>
     </div>
 
