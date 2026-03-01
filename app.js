@@ -17,22 +17,28 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // -----------------------------
-// Register user (NO coins given automatically)
+// Register user (NO coins automatically)
 // -----------------------------
 window.register = async function() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
+  if (!email || !password) {
+    alert("Please enter email and password");
+    return;
+  }
+
   try {
     const userCredential = await auth.createUserWithEmailAndPassword(email, password);
     const user = userCredential.user;
 
-    // Create user in Firestore with 0 coins
+    // Add user to Firestore with 0 coins
     await db.collection("users").doc(user.uid).set({
       coins: 0
     });
 
     alert("User registered successfully! Coins will be assigned by admin.");
+    document.getElementById("balance").innerText = "Coins: 0";
   } catch (error) {
     alert("Error: " + error.message);
   }
@@ -45,44 +51,22 @@ window.login = async function() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
+  if (!email || !password) {
+    alert("Please enter email and password");
+    return;
+  }
+
   try {
     const userCredential = await auth.signInWithEmailAndPassword(email, password);
     const user = userCredential.user;
 
-    // Fetch coins from Firestore
     const docSnap = await db.collection("users").doc(user.uid).get();
-    const coins = docSnap.data().coins;
+    const coins = docSnap.exists ? docSnap.data().coins : 0;
 
     document.getElementById("balance").innerText = "Coins: " + coins;
+    alert("Login successful!");
   } catch (error) {
     alert("Error: " + error.message);
   }
-}
-
-window.register = async function() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-  const user = userCredential.user;
-
-  await db.collection("users").doc(user.uid).set({
-    balance: 1000
-  });
-
-  alert("User registered with 1000 coins!");
-}
-
-window.login = async function() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  const userCredential = await auth.signInWithEmailAndPassword(email, password);
-  const user = userCredential.user;
-
-  const docSnap = await db.collection("users").doc(user.uid).get();
-  document.getElementById("balance").innerText =
-    "Balance: " + docSnap.data().balance + " Coins";
-
 }
 
