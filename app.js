@@ -1,8 +1,14 @@
 // Paste your Firebase config here later
 const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
+const firebaseConfig = {
+  apiKey: "AIzaSyCNJx1Mmyllt6W2nK85avRiyOjNPJd5aB8",
+  authDomain: "virtual-betting-833.firebaseapp.com",
+  projectId: "virtual-betting-833",
+  storageBucket: "virtual-betting-833.firebasestorage.app",
+  messagingSenderId: "495724554372",
+  appId: "1:495724554372:web:362d7254dfad07df607ad1",
+  measurementId: "G-35CPSG4BWD"
+};
 };
 
 const app = firebase.initializeApp(firebaseConfig);
@@ -33,4 +39,5 @@ window.login = async function() {
   const docSnap = await db.collection("users").doc(user.uid).get();
   document.getElementById("balance").innerText =
     "Balance: " + docSnap.data().balance + " Coins";
+
 }
