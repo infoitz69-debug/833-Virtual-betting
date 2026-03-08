@@ -1,41 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>833 Virtual Betting</title>
+  <title>833 Virtual Betting</title>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <!-- Firebase v8 scripts -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-<style>
-body{
-font-family:Arial;
-background:#111;
-color:white;
-text-align:center;
-}
-
-input,button{
-padding:10px;
-margin:5px;
-}
-
-.match{
-border:1px solid #444;
-padding:15px;
-margin:10px;
-}
-
-#dashboard{
-display:none;
-}
-
-#admin{
-margin-top:40px;
-border-top:2px solid #444;
-padding-top:20px;
-}
-</style>
+  <style>
+    body { font-family: Arial; background: #111; color: white; text-align: center; }
+    input, button { padding: 10px; margin: 5px; }
+    .match { border:1px solid #444; padding:15px; margin:10px; }
+    #dashboard { display:none; }
+    #admin { margin-top:40px; border-top:2px solid #444; padding-top:20px; }
+  </style>
 </head>
 
 <body>
@@ -44,279 +23,198 @@ padding-top:20px;
 
 <!-- LOGIN / REGISTER -->
 <div id="loginBox">
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-
-<br>
-
-<button onclick="register()">Register</button>
-<button onclick="login()">Login</button>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <br>
+  <button onclick="register()">Register</button>
+  <button onclick="login()">Login</button>
 </div>
 
 <!-- DASHBOARD -->
 <div id="dashboard">
+  <h2 id="balance">Coins: 0</h2>
 
-<h2 id="balance">Coins: 0</h2>
+  <h2>Matches</h2>
+  <div id="matches"></div>
 
-<h2>Matches</h2>
-<div id="matches"></div>
+  <h2>Leaderboard</h2>
+  <div id="leaderboard"></div>
 
-<h2>Leaderboard</h2>
-<div id="leaderboard"></div>
-
-<div id="admin"></div>
-
+  <div id="admin"></div>
 </div>
 
 <script>
-
-// -----------------------------
-// Firebase config
-// -----------------------------
-const firebaseConfig = {
-apiKey: "AIzaSyCNJx1Mmyllt6W2nK85avRiyOjNPJd5aB8",
-authDomain: "virtual-betting-833.firebaseapp.com",
-projectId: "virtual-betting-833",
-storageBucket: "virtual-betting-833.firebasestorage.app",
-messagingSenderId: "495724554372",
-appId: "1:495724554372:web:362d7254dfad07df607ad1"
-};
-
-firebase.initializeApp(firebaseConfig);
-
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-const ADMIN_EMAIL = "infoitz69@gmail.com";
-
-// -----------------------------
-// MATCH DATA
-// -----------------------------
-let matches = [
-{ id:1, name:"Team A vs Team B", odds:2 },
-{ id:2, name:"Team C vs Team D", odds:1.5 },
-{ id:3, name:"Team E vs Team F", odds:1.8 }
-];
-
-// -----------------------------
-// REGISTER
-// -----------------------------
-async function register(){
-
-const email = document.getElementById("email").value;
-const password = document.getElementById("password").value;
-
-if(!email || !password){
-alert("Enter email & password");
-return;
-}
-
-try{
-
-const userCredential = await auth.createUserWithEmailAndPassword(email,password);
-const user = userCredential.user;
-
-await db.collection("users").doc(user.uid).set({
-email:email,
-coins:0
-});
-
-alert("Registered successfully");
-
-}catch(e){
-alert(e.message);
-}
-
-}
-
-// -----------------------------
-// LOGIN
-// -----------------------------
-async function login(){
-
-const email = document.getElementById("email").value;
-const password = document.getElementById("password").value;
-
-try{
-
-const userCredential = await auth.signInWithEmailAndPassword(email,password);
-const user = userCredential.user;
-
-document.getElementById("loginBox").style.display="none";
-document.getElementById("dashboard").style.display="block";
-
-const doc = await db.collection("users").doc(user.uid).get();
-
-let coins = doc.exists ? doc.data().coins : 0;
-
-document.getElementById("balance").innerText="Coins: "+coins;
-
-loadMatches(user.uid);
-loadLeaderboard();
-
-if(email===ADMIN_EMAIL){
-loadAdminPanel();
-}
-
-}catch(e){
-alert(e.message);
-}
-
-}
-
-// -----------------------------
-// LOAD MATCHES
-// -----------------------------
-function loadMatches(userId){
-
-const container=document.getElementById("matches");
-container.innerHTML="";
-
-matches.forEach(match=>{
-
-const div=document.createElement("div");
-div.className="match";
-
-div.innerHTML=`
-
-<h3>${match.name}</h3>
-
-<p>Odds: ${match.odds}x</p>
-
-<input id="bet-${match.id}" type="number" placeholder="Coins">
-
-<button onclick="placeBet(${match.id},'${userId}')">
-Bet
-</button>
-
-`;
-
-container.appendChild(div);
-
-});
-
-}
-
-// -----------------------------
-// PLACE BET
-// -----------------------------
-async function placeBet(matchId,userId){
-
-const input=document.getElementById(`bet-${matchId}`);
-const bet=parseFloat(input.value);
-
-if(isNaN(bet)||bet<=0){
-alert("Invalid bet");
-return;
-}
-
-const userDoc=await db.collection("users").doc(userId).get();
-let coins=userDoc.data().coins;
-
-if(bet>coins){
-alert("Not enough coins");
-return;
-}
-
-const match=matches.find(m=>m.id===matchId);
-
-const win=Math.random()<0.5;
-
-coins += win ? bet*match.odds : -bet;
-
-alert(win ? "YOU WON!" : "YOU LOST!");
-
-await db.collection("users").doc(userId).update({
-coins:coins
-});
-
-document.getElementById("balance").innerText="Coins: "+coins;
-
-loadLeaderboard();
-
-}
-
-// -----------------------------
-// LEADERBOARD
-// -----------------------------
-async function loadLeaderboard(){
-
-const container=document.getElementById("leaderboard");
-
-container.innerHTML="";
-
-const snap=await db.collection("users")
-.orderBy("coins","desc")
-.limit(5)
-.get();
-
-snap.forEach(doc=>{
-
-const user=doc.data();
-
-const div=document.createElement("div");
-
-div.innerText=user.email+" : "+user.coins+" coins";
-
-container.appendChild(div);
-
-});
-
-}
-
-// -----------------------------
-// ADMIN PANEL
-// -----------------------------
-function loadAdminPanel(){
-
-const container=document.getElementById("admin");
-
-container.innerHTML="<h2>Admin Panel</h2>";
-
-matches.forEach((match,index)=>{
-
-const div=document.createElement("div");
-
-div.innerHTML=`
-
-<input id="name-${match.id}" value="${match.name}">
-
-<input id="odds-${match.id}" type="number" value="${match.odds}" step="0.1">
-
-<button onclick="updateMatch(${index},${match.id})">
-Update
-</button>
-
-`;
-
-container.appendChild(div);
-
-});
-
-}
-
-// -----------------------------
-// UPDATE MATCH
-// -----------------------------
-function updateMatch(index,id){
-
-const name=document.getElementById(`name-${id}`).value;
-
-const odds=parseFloat(document.getElementById(`odds-${id}`).value);
-
-matches[index].name=name;
-matches[index].odds=odds;
-
-alert("Updated");
-
-loadMatches(auth.currentUser.uid);
-
-}
+  // -----------------------------
+  // Firebase config (v8 style)
+  // -----------------------------
+  const firebaseConfig = {
+    apiKey: "AIzaSyCNJx1Mmyllt6W2nK85avRiyOjNPJd5aB8",
+    authDomain: "virtual-betting-833.firebaseapp.com",
+    projectId: "virtual-betting-833",
+    storageBucket: "virtual-betting-833.appspot.com", // ✅ must be .appspot.com
+    messagingSenderId: "495724554372",
+    appId: "1:495724554372:web:518f14b53a7e1ebb607ad1",
+    measurementId: "G-N98CHLZF2D"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const ADMIN_EMAIL = "infoitz69@gmail.com";
+
+  // -----------------------------
+  // Matches
+  // -----------------------------
+  let matches = [
+    { id:1, name:"Team A vs Team B", odds:2 },
+    { id:2, name:"Team C vs Team D", odds:1.5 },
+    { id:3, name:"Team E vs Team F", odds:1.8 }
+  ];
+
+  // -----------------------------
+  // REGISTER
+  // -----------------------------
+  async function register(){
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    if(!email || !password){ alert("Enter email & password"); return; }
+
+    try{
+      const userCredential = await auth.createUserWithEmailAndPassword(email,password);
+      const user = userCredential.user;
+
+      await db.collection("users").doc(user.uid).set({
+        email: email,
+        coins: 0
+      });
+
+      alert("Registered successfully. Coins: 0");
+    }catch(e){
+      alert(e.message);
+    }
+  }
+
+  // -----------------------------
+  // LOGIN
+  // -----------------------------
+  async function login(){
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    if(!email || !password){ alert("Enter email & password"); return; }
+
+    try{
+      const userCredential = await auth.signInWithEmailAndPassword(email,password);
+      const user = userCredential.user;
+
+      // Hide login form, show dashboard
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+
+      const doc = await db.collection("users").doc(user.uid).get();
+      let coins = doc.exists ? doc.data().coins : 0;
+      document.getElementById("balance").innerText = "Coins: " + coins;
+
+      loadMatches(user.uid);
+      loadLeaderboard();
+
+      if(email === ADMIN_EMAIL){ loadAdminPanel(); }
+
+    }catch(e){
+      alert(e.message);
+    }
+  }
+
+  // -----------------------------
+  // LOAD MATCHES
+  // -----------------------------
+  function loadMatches(userId){
+    const container = document.getElementById("matches");
+    container.innerHTML = "";
+    matches.forEach(match=>{
+      const div = document.createElement("div");
+      div.className = "match";
+      div.innerHTML = `
+        <h3>${match.name}</h3>
+        <p>Odds: ${match.odds}x</p>
+        <input id="bet-${match.id}" type="number" placeholder="Coins">
+        <button onclick="placeBet(${match.id},'${userId}')">Bet</button>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  // -----------------------------
+  // PLACE BET
+  // -----------------------------
+  async function placeBet(matchId,userId){
+    const input = document.getElementById(`bet-${matchId}`);
+    const bet = parseFloat(input.value);
+    if(isNaN(bet) || bet <=0){ alert("Invalid bet"); return; }
+
+    const userDoc = await db.collection("users").doc(userId).get();
+    let coins = userDoc.data().coins;
+    if(bet>coins){ alert("Not enough coins"); return; }
+
+    const match = matches.find(m=>m.id===matchId);
+    const win = Math.random()<0.5;
+
+    coins += win ? bet*match.odds : -bet;
+    alert(win ? `YOU WON! New coins: ${coins}` : `YOU LOST! New coins: ${coins}`);
+
+    await db.collection("users").doc(userId).update({ coins });
+    document.getElementById("balance").innerText = "Coins: " + coins;
+
+    loadLeaderboard();
+  }
+
+  // -----------------------------
+  // LEADERBOARD
+  // -----------------------------
+  async function loadLeaderboard(){
+    const container = document.getElementById("leaderboard");
+    container.innerHTML = "";
+    const snap = await db.collection("users").orderBy("coins","desc").limit(5).get();
+    snap.forEach(doc=>{
+      const user = doc.data();
+      const div = document.createElement("div");
+      div.innerText = `${user.email} : ${user.coins} coins`;
+      container.appendChild(div);
+    });
+  }
+
+  // -----------------------------
+  // ADMIN PANEL
+  // -----------------------------
+  function loadAdminPanel(){
+    const container = document.getElementById("admin");
+    container.innerHTML = "<h2>Admin Panel</h2>";
+    matches.forEach((match,index)=>{
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <input id="name-${match.id}" value="${match.name}">
+        <input id="odds-${match.id}" type="number" value="${match.odds}" step="0.1">
+        <button onclick="updateMatch(${index},${match.id})">Update</button>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function updateMatch(index,id){
+    const name = document.getElementById(`name-${id}`).value;
+    const odds = parseFloat(document.getElementById(`odds-${id}`).value);
+    matches[index].name = name;
+    matches[index].odds = odds;
+    alert("Match updated!");
+    loadMatches(auth.currentUser.uid);
+  }
 
 </script>
-
 </body>
 </html>
+
 
 
 
